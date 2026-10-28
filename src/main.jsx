@@ -11,7 +11,8 @@ import '@fontsource/dm-sans/700.css';
 import '@fontsource/newsreader/400.css';
 import '@fontsource/newsreader/500.css';
 import { initialData } from './seed.js';
-import { fullName, relatives, validateData, applyConfirmedParentage, applyConfirmedNoteCorrections, familyHighlight, branchColors, visitPerson, stepHistory, searchPeople, relationshipsTo } from './model.js';
+import { fullName, relatives, validateData, familyHighlight, branchColors, visitPerson, stepHistory, searchPeople, relationshipsTo } from './model.js';
+import { applyArchiveUpdates } from './updates.js';
 import { layoutTree, CARD_HEIGHT, CARD_WIDTH, READING_ZOOM, OVERVIEW_THRESHOLD } from './layout.js';
 import { localizeData, localizeRelationship, localizedYears, savePersonInLanguage, translate } from './localization.js';
 import './style.css';
@@ -156,7 +157,7 @@ function Archive() {
   const t = (text) => translate(text, language);
   const [loadIssue, setLoadIssue] = useState('');
   const [data, setData] = useState(() => {
-    try { const saved = localStorage.getItem(STORAGE_KEY); return saved ? validateData(applyConfirmedNoteCorrections(applyConfirmedParentage(JSON.parse(saved)))) : initialData; }
+    try { const saved = localStorage.getItem(STORAGE_KEY); return saved ? validateData(applyArchiveUpdates(JSON.parse(saved))) : initialData; }
     catch { return initialData; }
   });
   const [selectedId, setSelectedId] = useState(() => homePerson(data));
@@ -256,7 +257,7 @@ function Archive() {
     const file = event.target.files?.[0];
     if (!file) return;
     try {
-      const next = validateData(applyConfirmedNoteCorrections(applyConfirmedParentage(JSON.parse(await file.text()))));
+      const next = validateData(applyArchiveUpdates(JSON.parse(await file.text())));
       const nextLayout = layoutTree(next);
       setData(next);
       setLayout(nextLayout);

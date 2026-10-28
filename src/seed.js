@@ -101,6 +101,8 @@ const people = [
   ['169962fb-6e3f-4359-8b25-0f141e58e54c', 'Sergiy', 'Kolosar', 'male'],
   ['c9fe8fcd-1388-4125-a2d4-16b4e60232ab', 'Olena', 'Kolosar', 'female'],
   ['c747ac56-4085-48f0-9eac-85e554e82921', 'Sofiya (Sofa)', 'Geyshys', 'female', '1935-08-26', '1984-07-03', '', 'Died from cancer'],
+  ['bb0a322a-e879-4d01-a02f-5fd918435ad5', 'Alexander', '', 'male'],
+  ['20b78b2e-2b44-40ed-9cdf-7173d570fb70', 'Max', '', 'male'],
 ];
 
 const unions = [
@@ -144,7 +146,7 @@ const unions = [
   ['d7248fe3-81d1-4d03-a788-0a181da937cc', [79, 80], [81]],
   ['53d08223-65f6-46e2-be3c-629a79e18e6b', [79, 82], []],
   ['3efa5cc3-6216-42f5-97e8-6621f292f2c8', [81, 83], [84]],
-  ['f65dd4db-7b32-47c3-af5b-377648c99cb1', [84, 85], []],
+  ['f65dd4db-7b32-47c3-af5b-377648c99cb1', [84, 85], [100, 101]],
   ['fc454c6b-6b7d-4411-af17-d4ddae1cfd53', [81, 86], []],
   ['8b05ef09-8bcf-4927-95fd-00fb5dd76129', [88], [87]],
   ['78b1ae40-a416-4b3e-b4a8-068e3a9e5268', [88, 89], []],

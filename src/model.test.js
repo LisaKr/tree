@@ -2,10 +2,40 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validateData, applyConfirmedParentage, applyConfirmedNoteCorrections, relatives, years, familyHighlight, branchColors, visitPerson, stepHistory, searchPeople, relationshipsTo } from './model.js';
 import { initialData } from './seed.js';
+import { applyArchiveUpdates } from './updates.js';
 import { localizeData, localizePerson, localizeRelationship, savePersonInLanguage } from './localization.js';
 import { layoutTree, CARD_WIDTH, CARD_HEIGHT, FAMILY_GAP, BRANCH_GAP } from './layout.js';
 
 const person = (id) => ({ id, firstName: id, lastName: '' });
+
+test('Roman and Lisa have two sons with Ukrainian names and no invented dates or surnames', () => {
+  const family = initialData.unions['f65dd4db-7b32-47c3-af5b-377648c99cb1'];
+  assert.deepEqual(family.childIds.map((id) => initialData.persons[id].firstName), ['Alexander', 'Max']);
+  assert.deepEqual(family.childIds.map((id) => localizePerson(initialData.persons[id], 'uk').firstName), ['Олександр', 'Макс']);
+  family.childIds.forEach((id) => {
+    const child = initialData.persons[id];
+    assert.equal(child.gender, 'male');
+    assert.equal(child.birthDate, '');
+    assert.equal(child.lastName, '');
+    assert.deepEqual(relatives(initialData, id).parents.map((parent) => parent.id), family.partnerIds);
+  });
+});
+
+test('older archives receive Roman and Lisa\'s sons without losing edits or adding duplicates', () => {
+  const saved = structuredClone(initialData);
+  const familyId = 'f65dd4db-7b32-47c3-af5b-377648c99cb1';
+  const [alexander, max] = saved.unions[familyId].childIds;
+  delete saved.persons[max];
+  saved.unions[familyId].childIds = [alexander];
+  saved.persons[alexander].note = 'An existing memory.';
+  saved.persons[alexander].translations = { uk: { note: 'Збережений спогад.' } };
+  const updated = validateData(applyArchiveUpdates(saved));
+  assert.equal(updated.persons[alexander], saved.persons[alexander]);
+  assert.deepEqual(updated.unions[familyId].childIds, [alexander, max]);
+  assert.equal(applyArchiveUpdates(updated), updated);
+  const unrelated = { ...saved, unions: { ...saved.unions, [familyId]: { ...saved.unions[familyId], partnerIds: [saved.unions[familyId].partnerIds[0]] } } };
+  assert.equal(applyArchiveUpdates(unrelated).persons[max], undefined);
+});
 
 test('the removed zapis annotation stays absent in both languages and old saved notes', () => {
   const id = 'd9d2595b-c73c-436a-b361-662d4fc08362';
@@ -118,15 +148,15 @@ test('the supplied archive has Musya, not Moisey, as Irma\'s child', () => {
   assert.ok(relatives(initialData, musya).parents.some((entry) => entry.id === irma));
   assert.ok(!relatives(initialData, moisey).parents.some((entry) => entry.id === irma));
   assert.ok(relatives(initialData, moisey).partners.some((entry) => entry.id === musya));
-  assert.equal(Object.keys(initialData.persons).length, 100);
+  assert.equal(Object.keys(initialData.persons).length, 102);
   assert.equal(Object.keys(initialData.unions).length, 43);
 });
 
 test('the entire archive forms one connected tree without omitted people or overlapping cards', () => {
   const { nodes, edges } = layoutTree(initialData);
   const people = nodes.filter((node) => node.type === 'person');
-  assert.equal(people.length, 100);
-  assert.equal(new Set(people.map((node) => node.id)).size, 100);
+  assert.equal(people.length, 102);
+  assert.equal(new Set(people.map((node) => node.id)).size, 102);
   const neighbors = new Map(nodes.map((node) => [node.id, []]));
   edges.forEach(({ source, target }) => { neighbors.get(source).push(target); neighbors.get(target).push(source); });
   const reached = new Set();
@@ -298,7 +328,7 @@ test('partnership relatives get specific labels, including spouse parents and fo
 
 test('every connected person in the supplied archive has a specific relationship', () => {
   const labels = relationshipsTo(initialData, '360555b9-354a-4416-a1ff-1b9ea4c8a13c');
-  assert.equal(Object.keys(labels).length, 100);
+  assert.equal(Object.keys(labels).length, 102);
   assert.ok(Object.values(labels).every((label) => label && !['Related through a partnership', 'Connected through family', 'No recorded relationship'].includes(label)));
 });
 

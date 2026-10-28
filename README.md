@@ -19,7 +19,7 @@ Open the URL Vite prints. `npm run build` makes a production build; `npm test` c
 
 ## Your Archive
 
-The initial archive contains all 100 supplied people and 43 family records after consolidating duplicate single-parent records with the confirmed couples. **Musya and Sima are daughters of Irma and Sonya**; Irma and Rebecca's son Leonid (Lyolya) remains in their separate family. Musya and Moisey are parents of Leonid Moiseyevych and Sofiya. Musya is the creator's great-grandmother, not merely a relative through a partnership.
+The archive contains 102 people (the original 100 plus Roman and Lisa's sons Alexander and Max) and 43 family records after consolidating duplicate single-parent records with the confirmed couples. The boys' surnames and birth dates are not recorded. **Musya and Sima are daughters of Irma and Sonya**; Irma and Rebecca's son Leonid (Lyolya) remains in their separate family. Musya and Moisey are parents of Leonid Moiseyevych and Sofiya. Musya is the creator's great-grandmother, not merely a relative through a partnership. Older saved archives receive the confirmed sons without overwriting existing person edits.
 
 All people are always in one tree. Partners share generation rows, and recorded children are grouped in birth order where dates are available. Children descend from the junction in the line between their two parents. Irma's two marriages have separate junctions and child connectors. Records without a known second parent retain their single-parent connectors. Selecting a person highlights their recorded family; clicking empty space or Fit all restores full contrast.
 

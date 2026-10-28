@@ -3,11 +3,49 @@ import { readFile } from 'node:fs/promises';
 import { initialData } from '../src/seed.js';
 
 const personResult = (page, name) => page.locator('.directory-person').filter({ has: page.getByText(name, { exact: true }) });
+const PERSON_COUNT = Object.keys(initialData.persons).length;
+
+test('Roman and Lisa\'s sons appear in both languages and update older saved trees', async ({ page }) => {
+  const saved = structuredClone(initialData);
+  const familyId = 'f65dd4db-7b32-47c3-af5b-377648c99cb1';
+  const roman = '3a05dfb2-7023-4c8a-a5c2-bd529ed4d74d';
+  saved.unions[familyId].childIds.forEach((id) => delete saved.persons[id]);
+  saved.unions[familyId].childIds = [];
+  saved.persons[roman].note = 'An existing family memory.';
+  await page.addInitScript((data) => {
+    if (!localStorage.getItem('family-archive-v1')) localStorage.setItem('family-archive-v1', JSON.stringify(data));
+  }, saved);
+  await page.setViewportSize({ width: 1800, height: 1200 });
+  await page.goto('/');
+  await expect(page.locator('.react-flow__node-person')).toHaveCount(PERSON_COUNT);
+  await page.getByRole('textbox', { name: 'Search family' }).fill('Roman');
+  await personResult(page, 'Roman Kaydanovskiy').click();
+  await expect(page.locator('.details')).toContainText('Alexander');
+  await expect(page.locator('.details')).toContainText('Max');
+  await expect(page.locator('.person-note')).toHaveText('An existing family memory.');
+  await expect(page.locator(`.react-flow__edge.descent[data-id^="union-${familyId}-"]`)).toHaveCount(2);
+  await page.getByRole('button', { name: 'Close person details' }).click();
+  await page.getByRole('button', { name: 'Close family directory' }).click();
+  await page.getByRole('button', { name: 'Reset to reading zoom', exact: true }).click();
+  for (const name of ['Alexander', 'Max']) await expect(page.getByRole('button', { name: `View ${name}`, exact: true })).toBeInViewport();
+  await page.screenshot({ path: '.screenshots/roman-lisa-sons.png' });
+  await page.getByRole('button', { name: 'Українська', exact: true }).click();
+  await expect(page.locator('.node-name').filter({ hasText: /^Макс$/ })).toHaveCount(1);
+  await page.getByRole('button', { name: 'Відкрити список родини' }).click();
+  await page.getByRole('textbox', { name: 'Пошук у родині' }).fill('Макс');
+  await personResult(page, 'Макс').click();
+  await expect(page.locator('.details .relative')).toContainText(['Роман Кайдановський', 'Ліза', 'Олександр']);
+  await page.reload();
+  await expect(page.locator('.react-flow__node-person')).toHaveCount(PERSON_COUNT);
+  const updated = await page.evaluate(() => JSON.parse(localStorage.getItem('family-archive-v1')));
+  expect(updated.unions[familyId].childIds).toHaveLength(2);
+  expect(updated.persons[roman].note).toBe('An existing family memory.');
+});
 
 test('Ukrainian switches all names, notes, relationships and controls without moving the tree', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/');
-  await expect(page.locator('.react-flow__node-person')).toHaveCount(100);
+  await expect(page.locator('.react-flow__node-person')).toHaveCount(PERSON_COUNT);
   const positions = await page.locator('.react-flow__node-person').evaluateAll((nodes) => nodes.map((node) => [node.dataset.id, node.style.transform]));
   await page.getByRole('button', { name: 'Українська', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'uk');
@@ -100,7 +138,7 @@ test('Ukrainian is usable on small phones without overflowing controls or notes'
   await page.getByRole('button', { name: 'Закрити нотатку' }).click();
   await page.getByRole('button', { name: 'Закрити відомості про особу' }).click();
   await page.getByRole('button', { name: 'Показати всіх', exact: true }).click();
-  await expect(page.locator('.overview-card')).toHaveCount(100);
+  await expect(page.locator('.overview-card')).toHaveCount(PERSON_COUNT);
   await page.screenshot({ path: '.screenshots/ukrainian-mobile.png' });
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
   const header = await page.locator('.app-header').evaluate((element) => ({ width: element.clientWidth, content: element.scrollWidth }));
@@ -112,7 +150,7 @@ test('one connected tree, hover notes, correction, edits, and JSON roundtrip', a
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/');
-  await expect(page.locator('.react-flow__node-person')).toHaveCount(100);
+  await expect(page.locator('.react-flow__node-person')).toHaveCount(PERSON_COUNT);
   await expect(page.locator('.react-flow__node-union')).toHaveCount(43);
   await expect(page.getByRole('heading', { name: 'My Family', exact: true })).toBeVisible();
   await expect(page).toHaveTitle('My Family');
@@ -139,7 +177,7 @@ test('one connected tree, hover notes, correction, edits, and JSON roundtrip', a
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.locator('.details .person-note')).toContainText('A family memory');
   await page.reload();
-  await expect(page.locator('.react-flow__node-person')).toHaveCount(100);
+  await expect(page.locator('.react-flow__node-person')).toHaveCount(PERSON_COUNT);
   await page.getByRole('textbox', { name: 'Search family' }).fill('Leonid Moiseyevych');
   await personResult(page, 'Leonid Moiseyevych Geyshys').click();
   await expect(page.locator('.details .person-note')).toContainText('A family memory');
@@ -147,22 +185,22 @@ test('one connected tree, hover notes, correction, edits, and JSON roundtrip', a
   await page.getByRole('button', { name: 'Export JSON' }).click();
   const download = await downloadEvent;
   const exported = JSON.parse(await readFile(await download.path(), 'utf8'));
-  expect(Object.keys(exported.persons)).toHaveLength(100);
+  expect(Object.keys(exported.persons)).toHaveLength(PERSON_COUNT);
   expect(exported.unions['977a885f-85f2-4a49-a354-1c1f0d592351']).toBeUndefined();
   expect(exported.unions['6ce1de1d-0815-4b96-9619-c59933bf470d'].childIds).toEqual(expect.arrayContaining(['597c8a86-65b4-4470-82b0-53f142f30460', '94658361-3041-499c-8e27-6f2b2480368c']));
   expect(exported.unions['d9585b24-fa6e-45fd-b5bd-0ff7d07af39b'].childIds).toEqual(['d4ffe576-4458-4b5f-adbe-d1b3106f24e9']);
   await page.locator('input[type="file"]').setInputFiles({ name: 'tree.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(exported)) });
-  await expect(page.locator('.react-flow__node-person')).toHaveCount(100);
+  await expect(page.locator('.react-flow__node-person')).toHaveCount(PERSON_COUNT);
   await page.locator('input[type="file"]').setInputFiles({ name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{bad json') });
   await expect(page.getByRole('alert')).toContainText('not valid JSON');
-  await expect(page.locator('.react-flow__node-person')).toHaveCount(100);
+  await expect(page.locator('.react-flow__node-person')).toHaveCount(PERSON_COUNT);
   expect(errors).toEqual([]);
 });
 
 test('phone layout keeps all people and makes notes accessible by tapping', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await expect(page.locator('.react-flow__node-person')).toHaveCount(100);
+  await expect(page.locator('.react-flow__node-person')).toHaveCount(PERSON_COUNT);
   await expect(page.locator('.details')).toHaveCount(0);
   await page.screenshot({ path: '.screenshots/mobile.png' });
   await page.getByRole('button', { name: 'Open family directory' }).click();
@@ -175,17 +213,17 @@ test('phone layout keeps all people and makes notes accessible by tapping', asyn
   expect(hasOverflow).toBe(false);
   await page.getByRole('button', { name: 'Close person details' }).click();
   await page.getByRole('button', { name: 'Fit entire tree' }).click();
-  await expect(page.locator('.react-flow__node-person')).toHaveCount(100);
+  await expect(page.locator('.react-flow__node-person')).toHaveCount(PERSON_COUNT);
 });
 
 test('overview simplifies every card and reading restores dates, notes, and family labels', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('.reading-card')).toHaveCount(100);
+  await expect(page.locator('.reading-card')).toHaveCount(PERSON_COUNT);
   await expect(page.locator('.person-node .node-years').first()).toBeVisible();
   const clipped = await page.locator('.person-select').evaluateAll((cards) => cards.filter((card) => card.scrollHeight > card.clientHeight + 1 || card.scrollWidth > card.clientWidth + 1).map((card) => card.getAttribute('aria-label')));
   expect(clipped).toEqual([]);
   await page.getByRole('button', { name: 'Fit all', exact: true }).click();
-  await expect(page.locator('.overview-card')).toHaveCount(100);
+  await expect(page.locator('.overview-card')).toHaveCount(PERSON_COUNT);
   await expect(page.locator('.person-node .node-years')).toHaveCount(0);
   await expect(page.locator('.person-node .node-note')).toHaveCount(0);
   await expect(page.locator('.person-node .node-relation')).toHaveCount(0);
@@ -201,7 +239,7 @@ test('overview simplifies every card and reading restores dates, notes, and fami
   await expect(page.locator('.canvas-label')).toHaveCount(0);
   await page.getByRole('button', { name: 'Reset to reading zoom', exact: true }).click();
   await expect(page.locator('.zoom-value')).toHaveText('100%');
-  await expect(page.locator('.reading-card')).toHaveCount(100);
+  await expect(page.locator('.reading-card')).toHaveCount(PERSON_COUNT);
   await expect(page.locator('.person-node .node-note').first()).toBeAttached();
   await page.getByRole('textbox', { name: 'Search family' }).fill('Leonid Moiseyevych');
   await personResult(page, 'Leonid Moiseyevych Geyshys').click();
@@ -212,7 +250,7 @@ test('overview simplifies every card and reading restores dates, notes, and fami
   await expect(page.getByRole('button', { name: 'Highlight family connections' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Fit all', exact: true }).click();
   await expect(page.locator('.react-flow__node-person.is-dimmed')).toHaveCount(0);
-  await expect(page.locator('.react-flow__node-person')).toHaveCount(100);
+  await expect(page.locator('.react-flow__node-person')).toHaveCount(PERSON_COUNT);
 });
 
 test('search context, Back, Forward, and Return to me navigate people reliably', async ({ page }) => {

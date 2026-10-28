@@ -27,7 +27,7 @@ const nameWords = {
   Masha: 'Маша', Yosifovna: 'Йосипівна', Mirer: 'Мірер', Sofiya: 'Софія', Moiseevna: 'Мойсеївна',
   Krasnnopolskaya: 'Краснопольська', Zachar: 'Захар', Iosif: 'Йосип', Eoel: 'Йоель', Nachimovych: 'Нахімович',
   Bertha: 'Берта', Medvedovskaya: 'Медведовська', Anatoliy: 'Анатолій', Andriy: 'Андрій', Alyona: 'Альона',
-  Sergiy: 'Сергій', Olena: 'Олена', Sofa: 'Софа',
+  Sergiy: 'Сергій', Olena: 'Олена', Sofa: 'Софа', Alexander: 'Олександр', Max: 'Макс',
 };
 
 const places = {
